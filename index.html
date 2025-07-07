@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image to SVG Converter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Corrected the ImageTracerJS CDN link to point to the actual file -->
+    <script src="https://cdn.jsdelivr.net/npm/imagetracerjs@1.2.6/imagetracer_v1.2.6.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4f46e5; /* Indigo color */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-4xl bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 md:p-8">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">Logo to SVG Converter</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-2">Upload a PNG or JPG to trace it into a vector SVG.</p>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+            <!-- Left Column: Upload and Settings -->
+            <div class="flex flex-col space-y-6">
+                <div>
+                    <label for="image-upload" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">1. Upload Image</label>
+                    <input type="file" id="image-upload" accept="image/png, image/jpeg" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 dark:file:bg-indigo-900/50 file:text-indigo-700 dark:file:text-indigo-300 hover:file:bg-indigo-100 dark:hover:file:bg-indigo-900/70 cursor-pointer"/>
+                </div>
+
+                <!-- Original Image Preview -->
+                <div id="original-container" class="hidden">
+                    <h3 class="font-semibold mb-2 text-gray-900 dark:text-white">Original</h3>
+                    <div class="bg-gray-100 dark:bg-gray-700/50 rounded-lg p-4 flex items-center justify-center min-h-[200px]">
+                        <img id="original-image" class="max-w-full max-h-48 object-contain rounded-md"/>
+                    </div>
+                </div>
+
+                <!-- Tracing Options -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">2. Tracing Options</h3>
+                    <div class="space-y-4" id="options-panel">
+                        <!-- Number of Colors -->
+                        <div>
+                            <label for="numberofcolors" class="flex justify-between items-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Number of Colors
+                                <span id="colors-value" class="font-bold text-indigo-600 dark:text-indigo-400">16</span>
+                            </label>
+                            <input type="range" id="numberofcolors" min="2" max="32" value="16" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700">
+                        </div>
+                        <!-- Blur -->
+                        <div>
+                            <label for="blurradius" class="flex justify-between items-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Blur
+                                <span id="blur-value" class="font-bold text-indigo-600 dark:text-indigo-400">0</span>
+                            </label>
+                            <input type="range" id="blurradius" min="0" max="5" value="0" step="1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700">
+                        </div>
+                        <!-- Curve Detail -->
+                        <div>
+                            <label for="qtres" class="flex justify-between items-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Curve Detail
+                                <span id="qtres-value" class="font-bold text-indigo-600 dark:text-indigo-400">1</span>
+                            </label>
+                            <input type="range" id="qtres" min="0.1" max="5" value="1" step="0.1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-col space-y-3 pt-4">
+                     <button id="trace-btn" disabled class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors duration-200">
+                        3. Convert to SVG
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Column: SVG Output -->
+            <div class="flex flex-col space-y-6">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">4. Result</h3>
+                <div id="svg-container" class="bg-gray-100 dark:bg-gray-700/50 rounded-lg p-4 flex items-center justify-center min-h-[300px] lg:min-h-full relative overflow-hidden">
+                    <div id="placeholder-text" class="text-gray-500 dark:text-gray-400">Your SVG will appear here...</div>
+                    <div id="loader" class="loader hidden absolute"></div>
+                    <div id="svg-preview" class="w-full h-full flex items-center justify-center"></div>
+                </div>
+                <button id="download-btn" disabled class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors duration-200">
+                    Download SVG
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        // This event listener ensures that the code inside only runs after the
+        // entire HTML document has been loaded and parsed. This guarantees that
+        // both the ImageTracer library (from the head) and all the DOM elements
+        // are available for the script to use.
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements
+            const imageUpload = document.getElementById('image-upload');
+            const originalContainer = document.getElementById('original-container');
+            const originalImage = document.getElementById('original-image');
+            const traceBtn = document.getElementById('trace-btn');
+            const downloadBtn = document.getElementById('download-btn');
+            const svgPreview = document.getElementById('svg-preview');
+            const placeholderText = document.getElementById('placeholder-text');
+            const loader = document.getElementById('loader');
+
+            // Option Sliders
+            const optionsPanel = document.getElementById('options-panel');
+            const sliders = optionsPanel.querySelectorAll('input[type="range"]');
+            const colorsValue = document.getElementById('colors-value');
+            const blurValue = document.getElementById('blur-value');
+            const qtresValue = document.getElementById('qtres-value');
+
+            let uploadedImageURL = null;
+            let svgContent = null;
+            let lastFileName = 'logo';
+
+            // --- Event Listeners ---
+
+            // Update slider value displays
+            optionsPanel.addEventListener('input', (e) => {
+                if (e.target.type === 'range') {
+                    const valueSpanId = e.target.id.replace('radius', '').replace('numberof', '') + '-value';
+                    document.getElementById(valueSpanId).textContent = e.target.value;
+                }
+            });
+
+            // Handle image upload
+            imageUpload.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    lastFileName = file.name.split('.').slice(0, -1).join('.');
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        uploadedImageURL = event.target.result;
+                        originalImage.src = uploadedImageURL;
+                        originalContainer.classList.remove('hidden');
+                        traceBtn.disabled = false;
+                        // Reset previous result
+                        svgPreview.innerHTML = '';
+                        placeholderText.classList.remove('hidden');
+                        downloadBtn.disabled = true;
+                        svgContent = null;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // Handle trace button click
+            traceBtn.addEventListener('click', () => {
+                if (!uploadedImageURL) return;
+
+                // Show loader and disable buttons
+                loader.classList.remove('hidden');
+                placeholderText.classList.add('hidden');
+                traceBtn.disabled = true;
+                downloadBtn.disabled = true;
+                svgPreview.innerHTML = '';
+
+                // Get options from sliders
+                const options = {};
+                sliders.forEach(slider => {
+                    options[slider.id] = slider.value;
+                });
+
+                // Trace the image
+                // The library works asynchronously with a callback.
+                ImageTracer.imageToSVG(
+                    uploadedImageURL,
+                    (svgString) => {
+                        svgContent = svgString;
+                        svgPreview.innerHTML = svgString;
+                        
+                        // Hide loader and update button states
+                        loader.classList.add('hidden');
+                        traceBtn.disabled = false;
+                        downloadBtn.disabled = false;
+                    },
+                    options
+                );
+            });
+
+            // Handle download button click
+            downloadBtn.addEventListener('click', () => {
+                if (!svgContent) return;
+
+                // Create a blob from the SVG string
+                const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+
+                // Create a temporary link to trigger the download
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${lastFileName}.svg`;
+                document.body.appendChild(a);
+                a.click();
+                
+                // Clean up
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+        });
+    </script>
+</body>
+</html>
