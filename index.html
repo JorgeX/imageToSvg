@@ -94,7 +94,7 @@
             <!-- Right Column: SVG Output -->
             <div class="flex flex-col space-y-6">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">4. Result</h3>
-                <div id="svg-container" class="bg-gray-100 dark:bg-gray-700/50 rounded-lg p-4 flex items-center justify-center min-h-[300px] lg:min-h-full relative overflow-hidden">
+                <div id="svg-container" class="bg-gray-100 dark:bg-gray-700/50 rounded-lg p-4 flex items-center justify-center min-h-[300px] lg:min-h-[400px] relative overflow-auto">
                     <div id="placeholder-text" class="text-gray-500 dark:text-gray-400">Your SVG will appear here...</div>
                     <div id="loader" class="loader hidden absolute"></div>
                     <div id="svg-preview" class="w-full h-full flex items-center justify-center"></div>
@@ -187,8 +187,30 @@
                 ImageTracer.imageToSVG(
                     uploadedImageURL,
                     (svgString) => {
-                        svgContent = svgString;
-                        svgPreview.innerHTML = svgString;
+                        // Create a temporary div to parse the SVG string
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = svgString;
+                        const svg = tempDiv.querySelector('svg');
+                        
+                        // Set viewBox and preserveAspectRatio to maintain aspect ratio
+                        if (svg) {
+                            const width = svg.getAttribute('width') || '100%';
+                            const height = svg.getAttribute('height') || '100%';
+                            svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+                            svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+                            svg.style.maxWidth = '100%';
+                            svg.style.maxHeight = '100%';
+                            svg.style.width = 'auto';
+                            svg.style.height = 'auto';
+                            svg.removeAttribute('width');
+                            svg.removeAttribute('height');
+                            svgContent = tempDiv.innerHTML;
+                            svgPreview.innerHTML = '';
+                            svgPreview.appendChild(svg);
+                        } else {
+                            svgContent = svgString;
+                            svgPreview.innerHTML = svgString;
+                        }
                         
                         // Hide loader and update button states
                         loader.classList.add('hidden');
